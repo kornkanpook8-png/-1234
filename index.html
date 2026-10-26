@@ -1,0 +1,1051 @@
+<!DOCTYPE html>
+<html lang="th" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>สื่อการเรียนรู้โต้ตอบ 3D: การโคจรของดาวเคราะห์ ม.3</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Prompt & Kanit -->
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&family=Prompt:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Three.js Libraries via CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        prompt: ['Prompt', 'sans-serif'],
+                        kanit: ['Kanit', 'sans-serif'],
+                    },
+                    colors: {
+                        space: {
+                            950: '#030712',
+                            900: '#0b0f19',
+                            800: '#111827',
+                            700: '#1f2937',
+                        },
+                        neon: {
+                            cyan: '#38bdf8',
+                            purple: '#c084fc',
+                            amber: '#fbbf24',
+                            emerald: '#34d399',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body {
+            font-family: 'Prompt', sans-serif;
+            background-color: #030712;
+            color: #f3f4f6;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        /* Glassmorphism Classes */
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.65);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        }
+
+        .glass-card {
+            background: rgba(30, 41, 59, 0.5);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        .glass-button {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            transition: all 0.2s ease;
+        }
+
+        .glass-button:hover {
+            background: rgba(56, 189, 248, 0.2);
+            border-color: rgba(56, 189, 248, 0.5);
+            box-shadow: 0 0 15px rgba(56, 189, 248, 0.3);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(11, 15, 25, 0.8);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(56, 189, 248, 0.3);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(56, 189, 248, 0.6);
+        }
+
+        /* Range Slider Custom Styling */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            height: 6px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 18px;
+            width: 18px;
+            border-radius: 50%;
+            background: #38bdf8;
+            cursor: pointer;
+            box-shadow: 0 0 10px #38bdf8;
+            transition: transform 0.1s;
+        }
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        /* Pulsing Glow Effect */
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.8; filter: drop-shadow(0 0 8px rgba(56, 189, 248, 0.6)); }
+            50% { opacity: 1; filter: drop-shadow(0 0 18px rgba(56, 189, 248, 0.9)); }
+        }
+        .animate-glow {
+            animation: pulse-glow 3s infinite ease-in-out;
+        }
+
+        #webgl-container {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 0;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col justify-between relative overflow-hidden">
+
+    <!-- 3D Canvas Background Container -->
+    <div id="webgl-container"></div>
+
+    <!-- HEADER / TOP NAVIGATION -->
+    <header class="relative z-10 p-4 sm:p-6 flex flex-col md:flex-row justify-between items-center gap-4 pointer-events-none">
+        <!-- Logo Title -->
+        <div class="glass-panel px-5 py-3 rounded-2xl flex items-center space-x-3.5 pointer-events-auto border-cyan-500/30">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-sky-500/30">
+                <i class="fa-solid fa-globe text-xl"></i>
+            </div>
+            <div>
+                <h1 class="font-kanit text-lg sm:text-xl font-bold bg-gradient-to-r from-sky-400 via-indigo-200 to-purple-400 bg-clip-text text-transparent">
+                    ระบบการโคจรของดาวเคราะห์ 3D
+                </h1>
+                <p class="text-xs text-slate-400 font-light">สื่อการเรียนรู้โลกและดาราศาสตร์ ม.3 | Kepler's Laws 3D</p>
+            </div>
+        </div>
+
+        <!-- Tab Buttons & Controls -->
+        <div class="glass-panel p-1.5 rounded-2xl flex items-center space-x-1.5 pointer-events-auto text-xs sm:text-sm font-medium">
+            <button onclick="switchViewMode('sim')" id="btn-mode-sim" class="tab-btn px-4 py-2 rounded-xl transition-all duration-300 text-sky-400 bg-sky-500/20 border border-sky-500/40 shadow-lg shadow-sky-500/10">
+                <i class="fa-solid fa-cube mr-1.5"></i> 3D Simulator
+            </button>
+            <button onclick="switchViewMode('learn')" id="btn-mode-learn" class="tab-btn px-4 py-2 rounded-xl transition-all duration-300 text-slate-300 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-book-open mr-1.5"></i> บทเรียน & กฎเคพเลอร์
+            </button>
+            <button onclick="switchViewMode('quiz')" id="btn-mode-quiz" class="tab-btn px-4 py-2 rounded-xl transition-all duration-300 text-slate-300 hover:text-white hover:bg-white/5">
+                <i class="fa-solid fa-pen-to-square mr-1.5"></i> แบบทดสอบ (5 ข้อ)
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN UI LAYOUT AREA -->
+    <main class="relative z-10 flex-grow px-4 sm:px-6 flex flex-col justify-between pointer-events-none overflow-y-auto max-h-[calc(100vh-140px)]">
+
+        <!-- MODE 1: 3D SIMULATOR OVERLAY INTERFACE -->
+        <div id="sim-interface" class="w-full h-full flex flex-col lg:flex-row justify-between items-start gap-4 py-2">
+            
+            <!-- Left Overlay: Dynamic HUD Telemetry Cards -->
+            <div class="w-full lg:w-80 space-y-3 pointer-events-auto">
+                
+                <!-- Quick Camera Angle Presets -->
+                <div class="glass-panel p-3.5 rounded-2xl space-y-2">
+                    <span class="text-xs font-semibold text-slate-300 flex items-center">
+                        <i class="fa-solid fa-video text-sky-400 mr-2"></i> มุมมองกล้อง 3D (Camera Presets)
+                    </span>
+                    <div class="grid grid-cols-4 gap-1.5 text-xs">
+                        <button onclick="setCameraView('perspective')" class="glass-button py-2 rounded-xl text-center text-slate-200">
+                            <i class="fa-solid fa-eye block text-xs mb-0.5"></i> 3D อิสระ
+                        </button>
+                        <button onclick="setCameraView('top')" class="glass-button py-2 rounded-xl text-center text-slate-200">
+                            <i class="fa-solid fa-arrow-down block text-xs mb-0.5"></i> มุมบน
+                        </button>
+                        <button onclick="setCameraView('side')" class="glass-button py-2 rounded-xl text-center text-slate-200">
+                            <i class="fa-solid fa-arrows-left-right block text-xs mb-0.5"></i> ด้านข้าง
+                        </button>
+                        <button onclick="setCameraView('track')" id="btn-cam-track" class="glass-button py-2 rounded-xl text-center text-slate-200">
+                            <i class="fa-solid fa-crosshairs block text-xs mb-0.5"></i> ตามดาว
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Physics HUD Stats Card -->
+                <div class="glass-panel p-4 rounded-2xl space-y-3">
+                    <div class="flex justify-between items-center border-b border-white/10 pb-2">
+                        <span class="text-xs font-bold text-sky-300 uppercase tracking-wider flex items-center">
+                            <i class="fa-solid fa-gauge-high mr-2 text-sky-400"></i> ข้อมูลฟิสิกส์ Real-time
+                        </span>
+                        <span class="flex h-2 w-2 relative">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                        <div class="glass-card p-2.5 rounded-xl">
+                            <span class="text-slate-400 block text-[11px] mb-0.5">ความเร็วโคจร ($v$)</span>
+                            <span id="hud-v" class="text-base font-bold font-mono text-emerald-400">0.0</span>
+                            <span class="text-[10px] text-slate-500"> km/s</span>
+                        </div>
+                        <div class="glass-card p-2.5 rounded-xl">
+                            <span class="text-slate-400 block text-[11px] mb-0.5">ระยะห่างปัจจุบัน ($r$)</span>
+                            <span id="hud-r" class="text-base font-bold font-mono text-amber-300">0.00</span>
+                            <span class="text-[10px] text-slate-500"> AU</span>
+                        </div>
+                        <div class="glass-card p-2.5 rounded-xl">
+                            <span class="text-slate-400 block text-[11px] mb-0.5">คาบการโคจร ($T$)</span>
+                            <span id="hud-t" class="text-base font-bold font-mono text-sky-300">0.00</span>
+                            <span class="text-[10px] text-slate-500"> ปีโลก</span>
+                        </div>
+                        <div class="glass-card p-2.5 rounded-xl">
+                            <span class="text-slate-400 block text-[11px] mb-0.5">อัตราส่วน $T^2/a^3$</span>
+                            <span id="hud-ratio" class="text-base font-bold font-mono text-purple-300">1.00</span>
+                            <span class="text-[10px] text-slate-500"> (คงที่)</span>
+                        </div>
+                    </div>
+
+                    <!-- Orbit Extremes (Perihelion / Aphelion) -->
+                    <div class="pt-1 text-[11px] space-y-1 text-slate-300 border-t border-white/5">
+                        <div class="flex justify-between">
+                            <span class="text-slate-400"><i class="fa-solid fa-circle text-[8px] text-emerald-400 mr-1.5"></i>ใกล้ที่สุด (Perihelion):</span>
+                            <span id="hud-peri" class="font-mono font-semibold text-emerald-300">0.80 AU</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400"><i class="fa-solid fa-circle text-[8px] text-rose-400 mr-1.5"></i>ไกลที่สุด (Aphelion):</span>
+                            <span id="hud-aph" class="font-mono font-semibold text-rose-300">1.20 AU</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Solar System Planet Presets -->
+                <div class="glass-panel p-3.5 rounded-2xl space-y-2">
+                    <span class="text-xs font-semibold text-slate-300 flex items-center">
+                        <i class="fa-solid fa-meteor text-purple-400 mr-2"></i> เลือกดาวเคราะห์ในระบบสุริยะ
+                    </span>
+                    <div class="grid grid-cols-4 gap-1.5 text-xs">
+                        <button onclick="loadPlanetPreset('mercury')" class="glass-button py-2 rounded-xl text-slate-200">พุธ</button>
+                        <button onclick="loadPlanetPreset('venus')" class="glass-button py-2 rounded-xl text-slate-200">ศุกร์</button>
+                        <button onclick="loadPlanetPreset('earth')" class="glass-button py-2 rounded-xl text-slate-200">โลก</button>
+                        <button onclick="loadPlanetPreset('mars')" class="glass-button py-2 rounded-xl text-slate-200">อังคาร</button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Overlay: Interactive Control Sliders & Toggles Panel -->
+            <div class="w-full lg:w-96 space-y-3 pointer-events-auto">
+                <div class="glass-panel p-5 rounded-2xl space-y-5">
+                    
+                    <div class="flex justify-between items-center border-b border-white/10 pb-3">
+                        <h2 class="text-sm font-bold text-white flex items-center">
+                            <i class="fa-solid fa-sliders text-sky-400 mr-2"></i> แผงควบคุมตัวแปรการโคจร
+                        </h2>
+                        <span class="text-[10px] bg-sky-500/20 text-sky-300 px-2 py-0.5 rounded-md border border-sky-500/30">Kepler 3D</span>
+                    </div>
+
+                    <!-- Variable 1: Semi-major Axis (a) -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-xs">
+                            <label for="slider-a" class="font-medium text-slate-200">ตัวแปร 1: ระยะแกนกึ่งเอก (a)</label>
+                            <span class="font-mono text-sky-400 font-bold bg-sky-950/80 px-2 py-0.5 rounded border border-sky-500/30">
+                                <span id="val-a">1.00</span> AU
+                            </span>
+                        </div>
+                        <input type="range" id="slider-a" min="0.40" max="3.00" step="0.05" value="1.00" class="w-full">
+                        <div class="flex justify-between text-[10px] text-slate-400">
+                            <span>0.4 AU (ดาวพุธ)</span>
+                            <span>1.0 AU (โลก)</span>
+                            <span>3.0 AU (แถบดาวเคราะห์น้อย)</span>
+                        </div>
+                    </div>
+
+                    <!-- Variable 2: Eccentricity (e) -->
+                    <div class="space-y-2">
+                        <div class="flex justify-between text-xs">
+                            <label for="slider-e" class="font-medium text-slate-200">ตัวแปร 2: ความรีวงโคจร (e)</label>
+                            <span class="font-mono text-amber-400 font-bold bg-amber-950/80 px-2 py-0.5 rounded border border-amber-500/30">
+                                <span id="val-e">0.20</span>
+                            </span>
+                        </div>
+                        <input type="range" id="slider-e" min="0.00" max="0.75" step="0.01" value="0.20" class="w-full">
+                        <div class="flex justify-between text-[10px] text-slate-400">
+                            <span>0.00 (วงกลม)</span>
+                            <span>0.25 (วงรีปกติ)</span>
+                            <span>0.75 (วงรีมาก/ดาวหาง)</span>
+                        </div>
+                    </div>
+
+                    <!-- Visual Toggles -->
+                    <div class="pt-2 border-t border-white/10 space-y-2">
+                        <span class="text-xs font-semibold text-slate-300 block mb-1">การแสดงผลภาพ 3D:</span>
+                        <div class="grid grid-cols-2 gap-2 text-xs">
+                            <label class="glass-card p-2 rounded-xl flex items-center cursor-pointer hover:bg-white/5 transition">
+                                <input type="checkbox" id="toggle-orbit-line" checked class="rounded border-slate-700 text-sky-500 mr-2">
+                                <span>เส้นวงโคจร 3D</span>
+                            </label>
+                            <label class="glass-card p-2 rounded-xl flex items-center cursor-pointer hover:bg-white/5 transition">
+                                <input type="checkbox" id="toggle-vec" checked class="rounded border-slate-700 text-emerald-500 mr-2">
+                                <span class="text-emerald-400">เวกเตอร์ความเร็ว</span>
+                            </label>
+                            <label class="glass-card p-2 rounded-xl flex items-center cursor-pointer hover:bg-white/5 transition">
+                                <input type="checkbox" id="toggle-sweep" checked class="rounded border-slate-700 text-purple-500 mr-2">
+                                <span class="text-purple-300">พื้นที่กวาด (กฎข้อ 2)</span>
+                            </label>
+                            <label class="glass-card p-2 rounded-xl flex items-center cursor-pointer hover:bg-white/5 transition">
+                                <input type="checkbox" id="toggle-grid" checked class="rounded border-slate-700 text-slate-500 mr-2">
+                                <span>ระนาบกริต space</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Simulation Speed & Play Controls -->
+                    <div class="pt-2 border-t border-white/10 space-y-3">
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-slate-300">ความเร็วการจำลอง:</span>
+                            <span id="val-speed" class="font-mono text-sky-400 font-bold">1.0x</span>
+                        </div>
+                        <input type="range" id="slider-speed" min="0.1" max="4.0" step="0.1" value="1.0" class="w-full">
+
+                        <div class="flex space-x-2 pt-1">
+                            <button id="btn-toggle-play" onclick="togglePlayPause()" class="flex-1 bg-gradient-to-r from-sky-500 to-indigo-600 hover:from-sky-400 hover:to-indigo-500 text-white font-bold py-2.5 rounded-xl shadow-lg shadow-sky-500/20 transition flex items-center justify-center space-x-2">
+                                <i id="icon-play" class="fa-solid fa-pause"></i>
+                                <span id="text-play">หยุดชั่วคราว</span>
+                            </button>
+                            <button onclick="resetSimulation()" class="glass-button text-slate-300 px-4 py-2.5 rounded-xl transition">
+                                <i class="fa-solid fa-rotate-left"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+        </div>
+
+        <!-- MODE 2: COLLAPSIBLE EDUCATIONAL GUIDE PANEL -->
+        <div id="learn-interface" class="hidden w-full max-w-5xl mx-auto my-4 pointer-events-auto space-y-6">
+            <div class="glass-panel p-6 sm:p-8 rounded-3xl space-y-6">
+                
+                <div class="border-b border-white/10 pb-4">
+                    <h2 class="text-xl sm:text-2xl font-bold bg-gradient-to-r from-sky-400 via-indigo-300 to-purple-400 bg-clip-text text-transparent flex items-center">
+                        <i class="fa-solid fa-graduation-cap text-sky-400 mr-3"></i> สรุปเนื้อหา: กฎการโคจรของดาวเคราะห์ (Kepler's Laws)
+                    </h2>
+                    <p class="text-xs sm:text-sm text-slate-400 mt-1">บทเรียนดาราศาสตร์ ม.3 สรุปกฎ 3 ข้อของ โยฮันเนส เคพเลอร์ พร้อมสูตรและการประยุกต์ใช้</p>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <!-- Law 1 -->
+                    <div class="glass-card p-5 rounded-2xl border-l-4 border-l-sky-500 space-y-3 flex flex-col justify-between">
+                        <div>
+                            <span class="text-xs font-bold text-sky-400 uppercase tracking-widest block">กฎข้อที่ 1</span>
+                            <h3 class="text-base font-bold text-white mt-1">กฎของวงรี (Law of Ellipses)</h3>
+                            <p class="text-xs text-slate-300 leading-relaxed mt-2">
+                                ดาวเคราะห์ทุกดวงโคจรรอบดวงอาทิตย์เป็น **วงรี (Ellipse)** โดยมีดวงอาทิตย์อยู่ที่ **จุดโฟกัส (Focus)** จุดหนึ่ง
+                            </p>
+                        </div>
+                        <div class="bg-black/30 p-3 rounded-xl text-[11px] text-slate-400 border border-white/5 space-y-1">
+                            <div><strong class="text-sky-300">ค่าความรี ($e$):</strong> วัดความเบี้ยวของวงโคจร</div>
+                            <div>• $e = 0$: วงกลมสมบูรณ์</div>
+                            <div>• $0 < e < 1$: วงรี (ยิ่งใกล้ 1 ยิ่งรีมาก)</div>
+                        </div>
+                    </div>
+
+                    <!-- Law 2 -->
+                    <div class="glass-card p-5 rounded-2xl border-l-4 border-l-purple-500 space-y-3 flex flex-col justify-between">
+                        <div>
+                            <span class="text-xs font-bold text-purple-400 uppercase tracking-widest block">กฎข้อที่ 2</span>
+                            <h3 class="text-base font-bold text-white mt-1">กฎพื้นที่เท่ากัน (Equal Areas Law)</h3>
+                            <p class="text-xs text-slate-300 leading-relaxed mt-2">
+                                เส้นเชื่อมระหว่างดาวเคราะห์กับดวงอาทิตย์จะ **กวาดพื้นที่ไปได้เท่ากัน ในช่วงเวลาที่เท่ากัน**
+                            </p>
+                        </div>
+                        <div class="bg-black/30 p-3 rounded-xl text-[11px] text-slate-400 border border-white/5 space-y-1">
+                            <div><strong class="text-purple-300">ผลลัพธ์สำคัญ:</strong></div>
+                            <div>• ใกล้ดวงอาทิตย์ (Perihelion): **เคลื่อนที่เร็วที่สุด**</div>
+                            <div>• ไกลดวงอาทิตย์ (Aphelion): **เคลื่อนที่ช้าที่สุด**</div>
+                        </div>
+                    </div>
+
+                    <!-- Law 3 -->
+                    <div class="glass-card p-5 rounded-2xl border-l-4 border-l-amber-500 space-y-3 flex flex-col justify-between">
+                        <div>
+                            <span class="text-xs font-bold text-amber-400 uppercase tracking-widest block">กฎข้อที่ 3</span>
+                            <h3 class="text-base font-bold text-white mt-1">กฎของคาบการโคจร (Harmonic Law)</h3>
+                            <p class="text-xs text-slate-300 leading-relaxed mt-2">
+                                กำลังสองของคาบการโคจร ($T^2$) แปรผันตรงกับ กำลังสามของระยะห่างเฉลี่ย ($a^3$)
+                            </p>
+                        </div>
+                        <div class="bg-black/30 p-3 rounded-xl text-[11px] text-slate-400 border border-white/5 space-y-1 font-mono">
+                            <div class="text-center text-amber-300 font-bold text-sm py-1">T² = a³</div>
+                            <div class="text-[10px] text-slate-400 text-center font-sans">(เมื่อ T เป็นปีโลก และ a เป็นหน่วยดาราศาสตร์ AU)</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-center pt-2">
+                    <button onclick="switchViewMode('sim')" class="bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-sky-500/20 transition">
+                        <i class="fa-solid fa-play mr-2"></i> ทดลองในห้องจำลอง 3D
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- MODE 3: 5-QUESTION INTERACTIVE QUIZ MODULE -->
+        <div id="quiz-interface" class="hidden w-full max-w-4xl mx-auto my-4 pointer-events-auto space-y-6">
+            <div class="glass-panel p-6 sm:p-8 rounded-3xl space-y-6">
+                
+                <div class="flex justify-between items-center border-b border-white/10 pb-4">
+                    <div>
+                        <h2 class="text-xl font-bold text-white flex items-center">
+                            <i class="fa-solid fa-clipboard-check text-sky-400 mr-2.5"></i> แบบทดสอบวัดความรู้ 3D (5 ข้อ)
+                        </h2>
+                        <p class="text-xs text-slate-400 mt-1">ประเมินความเข้าใจเรื่องกฎของเคพเลอร์และการโคจรของดาวเคราะห์ ม.3</p>
+                    </div>
+                    <div id="quiz-score-badge" class="hidden glass-card px-4 py-2 rounded-2xl text-center border-emerald-500/40">
+                        <span class="text-[10px] text-slate-400 block uppercase">คะแนนที่ได้</span>
+                        <span id="quiz-score-text" class="text-lg font-bold font-mono text-emerald-400">0 / 5</span>
+                    </div>
+                </div>
+
+                <form id="quiz-form" onsubmit="handleQuizSubmit(event)" class="space-y-6">
+                    
+                    <!-- Question 1 -->
+                    <div class="glass-card p-5 rounded-2xl space-y-3">
+                        <div class="flex items-start">
+                            <span class="bg-sky-500/20 text-sky-400 font-bold px-2.5 py-1 rounded-lg text-xs mr-3">ข้อ 1</span>
+                            <h3 class="text-sm font-semibold text-slate-100">
+                                ตามกฎข้อที่ 1 ของเคพเลอร์ ตำแหน่งของดวงอาทิตย์ในระบบการโคจรของดาวเคราะห์อยู่ที่ตำแหน่งใด?
+                            </h3>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-2 pl-9">
+                            <label class="glass-button p-3 rounded-xl flex items-center cursor-pointer">
+                                <input type="radio" name="q1" value="A" class="text-sky-500 mr-2.5">
+                                <span>ก. อยู่จุดศูนย์กลางสมบูรณ์ของวงรี</span>
+                            </label>
+                            <label class="glass-button p-3 rounded-xl flex items-center cursor-pointer">
+                                <input type="radio" name="q1" value="B" class="text-sky-500 mr-2.5">
+                                <span>ข. อยู่ที่จุดโฟกัส (Focus) จุดหนึ่งของวงรี</span>
+                            </label>
+                            <label class="glass-button p-3 rounded-xl flex items-center cursor-pointer">
+                                <input type="radio" name="q1" value="C" class="text-sky-500 mr-2.5">
+                                <span>ค. อยู่ภายนอกวงโคจรของดาวเคราะห์</span>
+                            </label>
+                            <label class="glass-button p-3 rounded-xl flex items-center cursor-pointer">
+                                <input type="radio" name="q1" value="D" class="text-sky-500 mr-2.5">
+                                <span>ง. เคลื่อนที่เปลี่ยนตำแหน่งไปเรื่อยๆ ไม่มีจุดแน่นอน</span>
+                            </label>
+                        </div>
+                        <div id="exp-q1" class="hidden text-xs p-3 rounded-xl border mt-2"></div>
+                    </div>
+
+                    <!-- Question 2 -->
+                    <div class="glass-card p-5 rounded-2xl space-y-3">
+                        <div class="flex items-start">
+                            <span class="bg-sky-500/20 text-sky-400 font-bold px-2.5 py-1 rounded-lg text-xs mr-3">ข้อ 2</span>
+                            <h3 class="text-sm font-semibold text-slate-100">
+                                เมื่อดาวเคราะห์เคลื่อนที่เข้าใกล้ดวงอาทิตย์มากที่สุด (จุด Perihelion) ความเร็วในการโคจรจะเป็นอย่างไร?
+                            </h3>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-2 pl-9">
+                            <label class="glass-button p-3 rounded-xl flex items-center cursor-pointer">
+                                <input type="radio" name="q2" value="A" class="text-sky-500 mr-2.5">
+                                <span>ก. มีความเร็วสูงสุด</span>
+                            </label>
+                            <label class="glass-button p-3 rounded-xl flex items-center cursor-pointer">
+                                <input type="radio" name="q2" value="B" class="text-sky-500 mr-2.5">
+                                <span>ข. มีความเร็วช้าที่สุด</span>
+                            </label>
+                            <label class="glass-button p-3 rounded-xl flex items-center cursor-pointer">
+                                <input type="radio" name="q2" value="C" class="text-sky-500 mr-2.5">
+                                <span>ค. ความเร็วลดลงเหลือศูนย์</span>
+                            </label>
+                            <label class="glass-button p-3 rounded-xl flex items-center cursor-pointer">
+                                <input type="radio" name="q2" value="D" class="text-sky-500 mr-2.5">
+                                <span>ง. ความเร็วคงที่เท่ากับจุด Aphelion</span>
+                            </label>
+                        </div>
+                        <div id="exp-q2" class="hidden text-xs p-3 rounded-xl border mt-2"></div>
+                    </div>
+
+                    <!-- Question 3 -->
+                    <div class="glass-card p-5 rounded-2xl space-y-3">
+                        <div class="flex items-start">
+                            <span class="bg-sky-500/20 text-sky-400 font-bold px-2.5 py-1 rounded-lg text-xs mr-3">ข้อ 3</span>
+                            <h3 class="text-sm font-semibold text-slate-100">
+                                หากดาวเคราะห์ดวงหนึ่งมีระยะแกนกึ่งเอก $a = 4\text{ AU}$ จะมีคาบการโคจร ($T$) กี่ปีโลก?
+                            </h3>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-2 pl-9">
+                            <label class="glass-button p-3 rounded-xl flex items-center cursor-pointer">
+                                <input type="radio" name="q3" value="A" class="text-sky-500 mr-2.5">
+                                <span>ก. 4 ปี</span>
+                            </label>
+                            <label class="glass-button p-3 rounded-xl flex items-center cursor-pointer">
+                                <input type="radio" name="q3" value="B" class="text-sky-500 mr-2.5">
+                                <span>ข. 8 ปี</span>
+                            </label>
+                            <label class="glass-button p-3 rounded-xl flex items-center cursor-pointer">
+                                <input type="radio" name="q3" value="C" class="text-sky-500 mr-2.5">
+                                <span>ค. 16 ปี</span>
+                            </label>
+                            <label class="glass-button p-3 rounded-xl flex items-center cursor-pointer">
+                                <input type="radio" name="q3" value="D" class="text-sky-500 mr-2.5">
+                                <span>ง. 64 ปี</span>
+                            </label>
+                        </div>
+                        <div id="exp-q3" class="hidden text-xs p-3 rounded-xl border mt-2"></div>
+                    </div>
+
+                    <!-- Question 4 -->
+                    <div class="glass-card p-5 rounded-2xl space-y-3">
+                        <div class="flex items-start">
+                            <span class="bg-sky-500/20 text-sky-400 font-bold px-2.5 py-1 rounded-lg text-xs mr-3">ข้อ 4</span>
+                            <h3 class="text-sm font-semibold text-slate-100">
+                                ค่าความรีวงโคจร (Eccentricity: $e$) ที่เท่ากับ 0 หมายถึงวงโคจรรูปแบบใด?
+                            </h3>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-2 pl-9">
+                            <label class="glass-button p-3 rounded-xl flex items-center cursor-pointer">
+                                <input type="radio" name="q4" value="A" class="text-sky-500 mr-2.5">
+                                <span>ก. วงกลมสมบูรณ์</span>
+                            </label>
+                            <label class="glass-button p-3 rounded-xl flex items-center cursor-pointer">
+                                <input type="radio" name="q4" value="B" class="text-sky-500 mr-2.5">
+                                <span>ข. วงรีแบนมาก</span>
+                            </label>
+                            <label class="glass-button p-3 rounded-xl flex items-center cursor-pointer">
+                                <input type="radio" name="q4" value="C" class="text-sky-500 mr-2.5">
+                                <span>ค. เส้นโค้งพาราโบลา</span>
+                            </label>
+                            <label class="glass-button p-3 rounded-xl flex items-center cursor-pointer">
+                                <input type="radio" name="q4" value="D" class="text-sky-500 mr-2.5">
+                                <span>ง. วงโคจรเปิดหลุดออกจากระบบ</span>
+                            </label>
+                        </div>
+                        <div id="exp-q4" class="hidden text-xs p-3 rounded-xl border mt-2"></div>
+                    </div>
+
+                    <!-- Question 5 -->
+                    <div class="glass-card p-5 rounded-2xl space-y-3">
+                        <div class="flex items-start">
+                            <span class="bg-sky-500/20 text-sky-400 font-bold px-2.5 py-1 rounded-lg text-xs mr-3">ข้อ 5</span>
+                            <h3 class="text-sm font-semibold text-slate-100">
+                                สิ่งใดกล่าวถูกต้องเกี่ยวกับกฎข้อที่ 2 ของเคพเลอร์ (กฎพื้นที่เท่ากัน)?
+                            </h3>
+                        </div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-2 pl-9">
+                            <label class="glass-button p-3 rounded-xl flex items-center cursor-pointer">
+                                <input type="radio" name="q5" value="A" class="text-sky-500 mr-2.5">
+                                <span>ก. พื้นที่กวาดในเวลาเท่ากันจะมีขนาดเท่ากันเสมอ</span>
+                            </label>
+                            <label class="glass-button p-3 rounded-xl flex items-center cursor-pointer">
+                                <input type="radio" name="q5" value="B" class="text-sky-500 mr-2.5">
+                                <span>ข. ดาวเคราะห์เคลื่อนที่ด้วยอัตราเร็วคงที่ตลอดเส้นทาง</span>
+                            </label>
+                            <label class="glass-button p-3 rounded-xl flex items-center cursor-pointer">
+                                <input type="radio" name="q5" value="C" class="text-sky-500 mr-2.5">
+                                <span>ค. เมื่ออยู่ไกลดวงอาทิตย์ ดาวเคราะห์จะเคลื่อนที่เร็วขึ้น</span>
+                            </label>
+                            <label class="glass-button p-3 rounded-xl flex items-center cursor-pointer">
+                                <input type="radio" name="q5" value="D" class="text-sky-500 mr-2.5">
+                                <span>ง. คาบการโคจรขึ้นอยู่กับมวลของดาวเคราะห์</span>
+                            </label>
+                        </div>
+                        <div id="exp-q5" class="hidden text-xs p-3 rounded-xl border mt-2"></div>
+                    </div>
+
+                    <div class="flex justify-end space-x-3 pt-4 border-t border-white/10">
+                        <button type="button" onclick="resetQuiz()" class="glass-button px-5 py-2.5 rounded-xl text-xs text-slate-300">
+                            <i class="fa-solid fa-rotate-left mr-1"></i> ทำใหม่
+                        </button>
+                        <button type="submit" class="bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold px-6 py-2.5 rounded-xl text-xs shadow-lg shadow-sky-500/20 transition">
+                            <i class="fa-solid fa-paper-plane mr-1"></i> ส่งคำตอบและตรวจเฉลย
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- FOOTER HELPER BAR -->
+    <footer class="relative z-10 p-3 text-center text-[11px] text-slate-500 pointer-events-none">
+        <span>คลิก-ลากเพื่อหมุน | ลูกกลิ้งเมาส์เพื่อซูม | สื่อการสอนดาราศาสตร์ ม.3 โค้ด HTML 3D เดี่ยว</span>
+    </footer>
+
+    <!-- THREE.JS & APPLICATION LOGIC SCRIPT -->
+    <script>
+        /* --- NAVIGATION VIEW MODE SWITCHER --- */
+        function switchViewMode(mode) {
+            document.getElementById('sim-interface').classList.add('hidden');
+            document.getElementById('learn-interface').classList.add('hidden');
+            document.getElementById('quiz-interface').classList.add('hidden');
+
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.className = "tab-btn px-4 py-2 rounded-xl transition-all duration-300 text-slate-300 hover:text-white hover:bg-white/5";
+            });
+
+            if (mode === 'sim') {
+                document.getElementById('sim-interface').classList.remove('hidden');
+                document.getElementById('btn-mode-sim').className = "tab-btn px-4 py-2 rounded-xl transition-all duration-300 text-sky-400 bg-sky-500/20 border border-sky-500/40 shadow-lg shadow-sky-500/10";
+            } else if (mode === 'learn') {
+                document.getElementById('learn-interface').classList.remove('hidden');
+                document.getElementById('btn-mode-learn').className = "tab-btn px-4 py-2 rounded-xl transition-all duration-300 text-sky-400 bg-sky-500/20 border border-sky-500/40 shadow-lg shadow-sky-500/10";
+            } else if (mode === 'quiz') {
+                document.getElementById('quiz-interface').classList.remove('hidden');
+                document.getElementById('btn-mode-quiz').className = "tab-btn px-4 py-2 rounded-xl transition-all duration-300 text-sky-400 bg-sky-500/20 border border-sky-500/40 shadow-lg shadow-sky-500/10";
+            }
+        }
+
+        /* --- THREE.JS 3D ENGINE & SCENE SETUP --- */
+        const container = document.getElementById('webgl-container');
+        
+        let scene, camera, renderer, controls;
+        let sunMesh, sunCorona, planetMesh, planetAtmosphere, orbitLine, velocityArrow, sweepMeshGroup, spaceGrid;
+        
+        // Keplerian Physics State
+        let a = 1.0; // Semi-major axis in AU
+        let e = 0.20; // Eccentricity
+        let meanAnomaly = 0; // M in radians
+        let isPlaying = true;
+        let simSpeed = 1.0;
+        let cameraMode = 'perspective'; // perspective, top, side, track
+
+        // Physics Constants
+        const GMSun = 4 * Math.PI * Math.PI; // AU^3 / yr^2
+        const SCALE = 12.0; // Visual scale 1 AU = 12 Three.js units
+
+        function init3D() {
+            // Scene
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x030712, 0.005);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 25, 40);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            // OrbitControls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxDistance = 150;
+            controls.minDistance = 5;
+
+            // Lights
+            const ambientLight = new THREE.AmbientLight(0x334155, 0.8);
+            scene.add(ambientLight);
+
+            // Sun PointLight (Light source)
+            const sunLight = new THREE.PointLight(0xfff5ea, 2.5, 300, 0.5);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 1024;
+            sunLight.shadow.mapSize.height = 1024;
+            scene.add(sunLight);
+
+            // Create Starfield Background
+            createStarfield();
+
+            // Create 3D Objects
+            createSun();
+            createPlanet();
+            createOrbitLine();
+            createVelocityVector();
+            createSweepMeshGroup();
+            createSpaceGrid();
+
+            // Window Resize Listener
+            window.addEventListener('resize', onWindowResize);
+
+            // Start Animation Loop
+            animate();
+        }
+
+        // Starfield Generator
+        function createStarfield() {
+            const starsGeo = new THREE.BufferGeometry();
+            const count = 2000;
+            const positions = new Float32Array(count * 3);
+            for (let i = 0; i < count * 3; i++) {
+                positions[i] = (Math.random() - 0.5) * 300;
+            }
+            starsGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const starsMat = new THREE.PointsMaterial({ color: 0x94a3b8, size: 0.6, transparent: true, opacity: 0.8 });
+            const starField = new THREE.Points(starsGeo, starsMat);
+            scene.add(starField);
+        }
+
+        // Sun 3D Object with Corona Glow
+        function createSun() {
+            const sunGeo = new THREE.SphereGeometry(2.2, 32, 32);
+            const sunMat = new THREE.MeshBasicMaterial({ color: 0xfbbf24 });
+            sunMesh = new THREE.Mesh(sunGeo, sunMat);
+            scene.add(sunMesh);
+
+            // Outer Glow Corona
+            const coronaGeo = new THREE.SphereGeometry(2.8, 32, 32);
+            const coronaMat = new THREE.MeshBasicMaterial({
+                color: 0xf59e0b,
+                transparent: true,
+                opacity: 0.25,
+                side: THREE.BackSide
+            });
+            sunCorona = new THREE.Mesh(coronaGeo, coronaMat);
+            sunMesh.add(sunCorona);
+        }
+
+        // Planet 3D Object with Atmosphere Glow & Dynamic Ring
+        function createPlanet() {
+            const planetGeo = new THREE.SphereGeometry(0.8, 32, 32);
+            const planetMat = new THREE.MeshStandardMaterial({
+                color: 0x38bdf8,
+                roughness: 0.4,
+                metalness: 0.2
+            });
+            planetMesh = new THREE.Mesh(planetGeo, planetMat);
+            planetMesh.castShadow = true;
+            planetMesh.receiveShadow = true;
+            scene.add(planetMesh);
+
+            // Atmosphere Glow Mesh
+            const atmosGeo = new THREE.SphereGeometry(0.95, 32, 32);
+            const atmosMat = new THREE.MeshBasicMaterial({
+                color: 0x0284c7,
+                transparent: true,
+                opacity: 0.2,
+                side: THREE.BackSide
+            });
+            planetAtmosphere = new THREE.Mesh(atmosGeo, atmosMat);
+            planetMesh.add(planetAtmosphere);
+        }
+
+        // Orbit Ellipse 3D Line
+        function createOrbitLine() {
+            const points = [];
+            for (let i = 0; i <= 128; i++) {
+                points.push(new THREE.Vector3());
+            }
+            const lineGeo = new THREE.BufferGeometry().setFromPoints(points);
+            const lineMat = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.6 });
+            orbitLine = new THREE.Line(lineGeo, lineMat);
+            scene.add(orbitLine);
+            updateOrbitLineGeometry();
+        }
+
+        function updateOrbitLineGeometry() {
+            const points = [];
+            const segments = 128;
+            const b = a * Math.sqrt(1 - e * e); // semi-minor
+            const c = a * e; // focus offset
+
+            for (let i = 0; i <= segments; i++) {
+                const theta = (i / segments) * Math.PI * 2;
+                // Parametric ellipse centered on focus (Sun at 0,0,0)
+                const x = (a * Math.cos(theta) - c) * SCALE;
+                const z = (b * Math.sin(theta)) * SCALE;
+                points.push(new THREE.Vector3(x, 0, z));
+            }
+            orbitLine.geometry.setFromPoints(points);
+        }
+
+        // Velocity Arrow 3D Helper
+        function createVelocityVector() {
+            const dir = new THREE.Vector3(1, 0, 0);
+            const origin = new THREE.Vector3(0, 0, 0);
+            velocityArrow = new THREE.ArrowHelper(dir, origin, 3, 0x34d399, 0.8, 0.5);
+            scene.add(velocityArrow);
+        }
+
+        // Kepler's 2nd Law Sweep Area 3D Mesh
+        function createSweepMeshGroup() {
+            sweepMeshGroup = new THREE.Group();
+            scene.add(sweepMeshGroup);
+            updateSweepMesh();
+        }
+
+        function updateSweepMesh() {
+            // Clear old sweep meshes
+            while (sweepMeshGroup.children.length > 0) {
+                const obj = sweepMeshGroup.children[0];
+                obj.geometry.dispose();
+                obj.material.dispose();
+                sweepMeshGroup.remove(obj);
+            }
+
+            const sectorStep = Math.PI / 8;
+            const sectors = [0, 8]; // Perihelion sector & Aphelion sector
+
+            sectors.forEach(sIdx => {
+                const startAng = sIdx * sectorStep;
+                const endAng = startAng + sectorStep;
+                
+                const shape = new THREE.Shape();
+                shape.moveTo(0, 0); // Sun focus
+
+                for (let ang = startAng; ang <= endAng; ang += 0.02) {
+                    const r_ang = (a * (1 - e * e)) / (1 + e * Math.cos(ang));
+                    const px = r_ang * Math.cos(ang) * SCALE;
+                    const pz = r_ang * Math.sin(ang) * SCALE;
+                    shape.lineTo(px, pz);
+                }
+                shape.lineTo(0, 0);
+
+                const sweepGeo = new THREE.ShapeGeometry(shape);
+                const sweepMat = new THREE.MeshBasicMaterial({
+                    color: 0xc084fc,
+                    transparent: true,
+                    opacity: 0.35,
+                    side: THREE.DoubleSide
+                });
+                const mesh = new THREE.Mesh(sweepGeo, sweepMat);
+                mesh.rotation.x = Math.PI / 2; // Flat on XZ plane
+                sweepMeshGroup.add(mesh);
+            });
+        }
+
+        // Space Grid Helper
+        function createSpaceGrid() {
+            spaceGrid = new THREE.GridHelper(80, 40, 0x1e293b, 0x0f172a);
+            spaceGrid.position.y = -0.1;
+            scene.add(spaceGrid);
+        }
+
+        // Solve Kepler's Equation for Eccentric Anomaly (E)
+        function solveKepler(M, e) {
+            let E = M;
+            for (let i = 0; i < 7; i++) {
+                E = E - (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E));
+            }
+            return E;
+        }
+
+        // Animation Frame Update
+        let clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const dt = clock.getDelta();
+
+            if (isPlaying) {
+                // Orbital Period T = a^1.5
+                const T = Math.pow(a, 1.5);
+                const meanMotion = (2 * Math.PI) / T; // rad/yr
+                meanAnomaly += meanMotion * dt * 0.25 * simSpeed;
+                if (meanAnomaly > 2 * Math.PI) meanAnomaly -= 2 * Math.PI;
+            }
+
+            // Calculate 3D Orbit Physics Positions
+            const E = solveKepler(meanAnomaly, e);
+            const v = 2 * Math.atan2(Math.sqrt(1 + e) * Math.sin(E / 2), Math.sqrt(1 - e) * Math.cos(E / 2));
+            const r = a * (1 - e * Math.cos(E)); // Distance in AU
+
+            // 3D Coordinates (Sun fixed at 0,0,0)
+            const px = r * Math.cos(v) * SCALE;
+            const pz = r * Math.sin(v) * SCALE;
+            
+            planetMesh.position.set(px, 0, pz);
+            planetMesh.rotation.y += 0.01; // Self rotation
+
+            // Update Velocity Vector
+            const orbitalSpeed = Math.sqrt(GMSun * (2 / r - 1 / a)); // Vis-viva (AU/yr)
+            const speedKms = orbitalSpeed * 29.78; // Convert to km/s
+
+            const vx = -Math.sin(E) * (a / r);
+            const vz = Math.sqrt(1 - e * e) * Math.cos(E) * (a / r);
+            const vDir = new THREE.Vector3(vx, 0, vz).normalize();
+
+            velocityArrow.position.set(px, 0, pz);
+            velocityArrow.setDirection(vDir);
+            velocityArrow.setLength(Math.min(6, orbitalSpeed * 1.5), 0.8, 0.4);
+
+            // Update Camera Tracking Mode
+            if (cameraMode === 'track') {
+                controls.target.copy(planetMesh.position);
+            }
+
+            // Update HUD Stats
+            document.getElementById('hud-v').innerText = speedKms.toFixed(1);
+            document.getElementById('hud-r').innerText = r.toFixed(2);
+            document.getElementById('hud-t').innerText = Math.pow(a, 1.5).toFixed(2);
+            document.getElementById('hud-ratio').innerText = (Math.pow(Math.pow(a, 1.5), 2) / Math.pow(a, 3)).toFixed(2);
+            document.getElementById('hud-peri').innerText = (a * (1 - e)).toFixed(2) + " AU";
+            document.getElementById('hud-aph').innerText = (a * (1 + e)).toFixed(2) + " AU";
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        /* --- INTERACTIVE CONTROLS EVENT LISTENERS --- */
+        const sliderA = document.getElementById('slider-a');
+        const sliderE = document.getElementById('slider-e');
+        const sliderSpeed = document.getElementById('slider-speed');
+
+        sliderA.addEventListener('input', (evt) => {
+            a = parseFloat(evt.target.value);
+            document.getElementById('val-a').innerText = a.toFixed(2);
+            updateOrbitLineGeometry();
+            updateSweepMesh();
+        });
+
+        sliderE.addEventListener('input', (evt) => {
+            e = parseFloat(evt.target.value);
+            document.getElementById('val-e').innerText = e.toFixed(2);
+            updateOrbitLineGeometry();
+            updateSweepMesh();
+        });
+
+        sliderSpeed.addEventListener('input', (evt) => {
+            simSpeed = parseFloat(evt.target.value);
+            document.getElementById('val-speed').innerText = simSpeed.toFixed(1) + 'x';
+        });
+
+        // Visual Toggles
+        document.getElementById('toggle-orbit-line').addEventListener('change', e => orbitLine.visible = e.target.checked);
+        document.getElementById('toggle-vec').addEventListener('change', e => velocityArrow.visible = e.target.checked);
+        document.getElementById('toggle-sweep').addEventListener('change', e => sweepMeshGroup.visible = e.target.checked);
+        document.getElementById('toggle-grid').addEventListener('change', e => spaceGrid.visible = e.target.checked);
+
+        // Camera Angle Presets
+        function setCameraView(view) {
+            cameraMode = view;
+            controls.target.set(0, 0, 0);
+
+            if (view === 'perspective') {
+                camera.position.set(0, 25, 40);
+            } else if (view === 'top') {
+                camera.position.set(0, 50, 0.1);
+            } else if (view === 'side') {
+                camera.position.set(0, 1, 45);
+            } else if (view === 'track') {
+                controls.target.copy(planetMesh.position);
+            }
+        }
+
+        // Planet Presets
+        const planetPresets = {
+            mercury: { a: 0.39, e: 0.206 },
+            venus:   { a: 0.72, e: 0.007 },
+            earth:   { a: 1.00, e: 0.017 },
+            mars:    { a: 1.52, e: 0.093 }
+        };
+
+        function loadPlanetPreset(name) {
+            const p = planetPresets[name];
+            if (!p) return;
+            a = p.a;
+            e = p.e;
+            sliderA.value = a;
+            sliderE.value = e;
+            document.getElementById('val-a').innerText = a.toFixed(2);
+            document.getElementById('val-e').innerText = e.toFixed(2);
+            updateOrbitLineGeometry();
+            updateSweepMesh();
+        }
+
+        function togglePlayPause() {
+            isPlaying = !isPlaying;
+            document.getElementById('text-play').innerText = isPlaying ? "หยุดชั่วคราว" : "เล่นต่อ";
+            document.getElementById('icon-play').className = isPlaying ? "fa-solid fa-pause" : "fa-solid fa-play";
+        }
+
+        function resetSimulation() {
+            meanAnomaly = 0;
+            if (!isPlaying) togglePlayPause();
+        }
+
+        /* --- QUIZ EVALUATION LOGIC --- */
+        const quizSolutions = {
+            q1: { ans: "B", exp: "ถูกต้อง! กฎข้อที่ 1 ของเคพเลอร์ระบุว่า ดวงอาทิตย์อยู่ที่ **จุดโฟกัส (Focus)** จุดหนึ่งของวงรี ไม่ใช่อยู่ตรงจุดศูนย์กลาง" },
+            q2: { ans: "A", exp: "ถูกต้อง! เมื่อดาวเคราะห์เข้าใกล้ดวงอาทิตย์มากที่สุด (Perihelion) แรงดึงดูดจะมากที่สุด ทำให้เคลื่อนที่ด้วย **ความเร็วสูงสุด**" },
+            q3: { ans: "B", exp: "ถูกต้อง! จากสูตร $T^2 = a^3$ ➔ $T^2 = 4^3 = 64$ ➔ $T = \\sqrt{64} = 8$ ปี" },
+            q4: { ans: "A", exp: "ถูกต้อง! ค่าความรี $e = 0$ หมายถึงความเบี้ยวเป็นศูนย์ วงโคจรจึงเป็น **วงกลมสมบูรณ์**" },
+            q5: { ans: "A", exp: "ถูกต้อง! กฎข้อที่ 2 ของเคพเลอร์ระบุว่า เส้นรัศมีจากดวงอาทิตย์ไปยังดาวเคราะห์จะ **กวาดพื้นที่ไปได้เท่ากันในเวลาที่เท่ากัน**" }
+        };
+
+        function handleQuizSubmit(e) {
+            e.preventDefault();
+            let score = 0;
+            const formData = new FormData(document.getElementById('quiz-form'));
+
+            for (let i = 1; i <= 5; i++) {
+                const qKey = 'q' + i;
+                const userAns = formData.get(qKey);
+                const expBox = document.getElementById('exp-' + i);
+                expBox.classList.remove('hidden', 'bg-emerald-950/60', 'border-emerald-500/50', 'text-emerald-300', 'bg-rose-950/60', 'border-rose-500/50', 'text-rose-300');
+
+                if (userAns === quizSolutions[qKey].ans) {
+                    score++;
+                    expBox.classList.add('bg-emerald-950/60', 'border-emerald-500/50', 'text-emerald-300');
+                    expBox.innerHTML = `<i class="fa-solid fa-check-circle text-emerald-400 mr-1.5"></i> <strong>ถูกต้อง!</strong> ${quizSolutions[qKey].exp}`;
+                } else {
+                    expBox.classList.add('bg-rose-950/60', 'border-rose-500/50', 'text-rose-300');
+                    expBox.innerHTML = `<i class="fa-solid fa-times-circle text-rose-400 mr-1.5"></i> <strong>ยังไม่ถูกต้อง</strong> (เฉลยข้อ ${quizSolutions[qKey].ans})<br>${quizSolutions[qKey].exp}`;
+                }
+            }
+
+            const scoreBadge = document.getElementById('quiz-score-badge');
+            document.getElementById('quiz-score-text').innerText = `${score} / 5`;
+            scoreBadge.classList.remove('hidden');
+            scoreBadge.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+
+        function resetQuiz() {
+            document.getElementById('quiz-form').reset();
+            document.getElementById('quiz-score-badge').classList.add('hidden');
+            for (let i = 1; i <= 5; i++) {
+                document.getElementById('exp-' + i).classList.add('hidden');
+            }
+        }
+
+        // Initialize 3D Engine on Page Load
+        window.addEventListener('DOMContentLoaded', init3D);
+    </script>
+</body>
+</html>
